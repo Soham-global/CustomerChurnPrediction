@@ -3,6 +3,14 @@ import joblib
 import numpy as np
 import pandas as pd
 
+#changed
+import os
+from datetime import datetime#for showing datetime
+
+import requests
+import json      # For formatting JSON
+
+
 # WSGI
 app = Flask(__name__)
 
@@ -27,35 +35,61 @@ numeric_columns = ['Age', 'Number_of_Referrals', 'Tenure_in_Months',
                    'Monthly_Charge', 'Total_Charges', 'Total_Extra_Data_Charges',
                    'Total_Long_Distance_Charges', 'Total_Revenue']
 
+
+#changed 
+
+POWERBI_PUSH_URL = "https://api.powerbi.com/beta/ca43080f-e4c8-47a5-90bc-bcac0d1979ff/datasets/cf5ed4bf-9a9b-4397-b2eb-4b6401db892a/rows?experience=power-bi&key=ZK6e5uND9G8pkoVzuZh34QOwuYZSkHKmC6so%2FKQ20%2BOtq%2BkqQuUIxhovu45cCTqK%2FT0lPguLAWhdxK91u3vmTw%3D%3D"
+
+
+
+def push_to_powerbi(input_dict, prediction_result):
+    input_dict['Prediction'] = prediction_result
+    input_dict['Timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    payload = [input_dict]
+
+    try:
+        # Just push the new row (no delete)
+        print("=== Payload being sent to Power BI ===")
+        print(json.dumps(payload[0], indent=4))
+
+        response = requests.post(POWERBI_PUSH_URL, json=payload)
+        response.raise_for_status()
+        print("✅ Data pushed to Power BI successfully.")
+    except requests.exceptions.RequestException as e:
+        print("❌ Power BI update failed:", e)
+
+
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Get form data
-    input_data = {}
-    for feature in selected_features:
-        input_data[feature] = request.form.get(feature)
-
-    # Convert to DataFrame
+    input_data = {feature: request.form.get(feature) for feature in selected_features}
     input_df = pd.DataFrame([input_data])
 
-    # Convert numeric columns to float
-    for column in numeric_columns:
-        input_df[column] = input_df[column].astype(float)
+    for col in numeric_columns:
+        input_df[col] = input_df[col].astype(float)
 
-    # Apply label encoding to categorical columns
-    for column in categorical_columns:
-        input_df[column] = label_encoders[column].transform(input_df[column])
+    for col in categorical_columns:
+        input_df[col] = label_encoders[col].transform(input_df[col])
 
-    # Predict
     prediction = rf_model.predict(input_df)
-
-    # Map prediction to label
     result = 'Churned' if prediction[0] == 1 else 'Stayed'
 
-    return render_template('index.html', prediction=result)
+    input_original = input_data.copy()
+    for col in categorical_columns:
+        input_original[col] = label_encoders[col].inverse_transform([input_df[col][0]])[0]
+
+    # Push to Power BI
+    push_to_powerbi(input_original, result)
+
+    return render_template(
+        'result.html',
+        prediction=result,
+    )
+
 
 if __name__ == '__main__':
     app.run(debug=True)
