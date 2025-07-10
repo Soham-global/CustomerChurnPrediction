@@ -99,6 +99,7 @@ Then go to http://127.0.0.1:5000/ in your browser.
 ```
 
 📊 Power BI Setup
+
 Report is created using Power BI Online Service
 Streaming dataset configured to accept live data via REST API
 Timestamp and Top N filter ensure only the latest records are displayed
@@ -106,21 +107,13 @@ Embedded in the site using an iframe in index.html
 Make sure your Power BI report is shared publicly or with required access for iframe to work.
 
 🚀 Deployment Notes
+
 Project can be hosted using Render, Heroku, or any Flask-compatible host.
 If using Render, connect the repo and enable auto-deploy from main branch.
 
 💡 Future Enhancements
+
 Add user login system
 Logging & monitoring with logs dashboard
 Option to export prediction history to Excel or CSV
 
-
-
-
-
-
-
-
-
-
-Ask ChatGPT
